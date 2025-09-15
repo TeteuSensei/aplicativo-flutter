@@ -1,0 +1,49 @@
+# ---- Flutter / Dart ----
+.dart_tool/
+.packages
+.pub-cache/
+.flutter-plugins
+.flutter-plugins-dependencies
+.melos_tool/
+.fvm/
+coverage/
+build/
+pubspec.lock
+
+# Exceptions (mantenha o lock se for package, não app)
+# !pubspec.lock
+
+# ---- Android ----
+**/local.properties
+**/.gradle/
+**/captures/
+**/gradle-wrapper.jar
+**/build/
+*.iml
+.idea/
+.gradle/
+
+# NDK / keystore / secrets
+**/*.keystore
+**/*.jks
+**/key.properties
+
+# ---- iOS / macOS ----
+**/Pods/
+**/Podfile.lock
+**/*.xcworkspace/
+**/DerivedData/
+**/*.xcuserdatad/
+**/*.xcuserstate
+**/.DS_Store
+
+# ---- VSCode / IDE ----
+.vscode/
+*.code-workspace
+.idea/
+
+# ---- Outros ----
+.sass-cache/
+*.log
+.env
+.env.*
