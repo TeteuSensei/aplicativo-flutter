@@ -1,21 +1,8 @@
-// lib/pages/treinos_view.dart
 import 'package:flutter/material.dart';
-import '../models/treino_detalhe_view.dart';
-
-// Modelo (status, datas, etc.)
 import '../models/treino.dart';
-
-
-// Widgets reutilizáveis da tela
 import '../widgets/treino_card.dart';
 import '../widgets/novo_treino_sheet.dart';
 
-
-/// Tela de listagem de treinos do usuário.
-/// - Lista em cards com ações (editar, duplicar, excluir, favorito)
-/// - Filtros: busca por nome, status (Ativo/Futuro/Expirado) e "somente favoritos"
-/// - Pull-to-refresh (placeholder para integrar com API depois)
-/// - FAB para criar novo treino (abre bottom sheet com formulário)
 class TreinosView extends StatefulWidget {
   const TreinosView({super.key});
 
@@ -24,9 +11,6 @@ class TreinosView extends StatefulWidget {
 }
 
 class _TreinosViewState extends State<TreinosView> {
-  // ---------------------------------------------------------------------------
-  // MOCK: lista inicial de treinos (substituir depois por carregamento via API)
-  // ---------------------------------------------------------------------------
   final List<Treino> _treinos = [
     Treino(
       id: 1,
@@ -52,36 +36,26 @@ class _TreinosViewState extends State<TreinosView> {
     ),
   ];
 
-  // Estado de UI: busca, filtro por status e favoritos
   String _busca = '';
   TreinoStatus? _filtroStatus; // null = todos
   bool _somenteFavoritos = false;
-
-  // Controller da lista (para dar scroll ao topo após criar novo treino)
   final _scrollCtrl = ScrollController();
 
-  // ----------------------------------------------------------------------------
-  // Getter que aplica os filtros na lista original e ordena:
-  //   1) favoritos primeiro; 2) por data de criação (mais recente primeiro)
-  // ----------------------------------------------------------------------------
   List<Treino> get _listaFiltrada {
     return _treinos.where((t) {
-      final byBusca =
-          _busca.isEmpty || t.nome.toLowerCase().contains(_busca.toLowerCase());
+      final byBusca = _busca.isEmpty || t.nome.toLowerCase().contains(_busca.toLowerCase());
       final byFav = !_somenteFavoritos || t.favorito;
       final byStatus = _filtroStatus == null || t.status == _filtroStatus;
       return byBusca && byFav && byStatus;
-    }).toList()..sort((a, b) {
-      final favDiff = (b.favorito ? 1 : 0) - (a.favorito ? 1 : 0);
-      if (favDiff != 0) return favDiff;
-      return b.criadoEm.compareTo(a.criadoEm);
-    });
+    }).toList()
+      ..sort((a, b) {
+        // favoritos primeiro, depois mais recentes pela criação
+        final fav = (b.favorito ? 1 : 0) - (a.favorito ? 1 : 0);
+        if (fav != 0) return fav;
+        return b.criadoEm.compareTo(a.criadoEm);
+      });
   }
 
-  // ----------------------------------------------------------------------------
-  // Abre o bottom sheet de "Novo treino" e adiciona o resultado na lista
-  // (Depois: substituir por POST na API e recarregar via GET)
-  // ----------------------------------------------------------------------------
   Future<void> _abrirNovoTreino() async {
     final novo = await showModalBottomSheet<Treino>(
       context: context,
@@ -95,23 +69,14 @@ class _TreinosViewState extends State<TreinosView> {
     );
     if (novo != null) {
       setState(() => _treinos.add(novo));
-      // Scroll até o topo pra evidenciar o novo item
-      if (mounted) {
-        _scrollCtrl.animateTo(
-          0,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
+      // TODO: integrar com API: enviar POST e recarregar lista
+      _scrollCtrl.animateTo(0, duration: const Duration(milliseconds: 300), curve: Curves.easeOut);
     }
   }
 
-  // Ações do card (stubs para integrar depois)
   void _editarTreino(Treino t) {
-    // TODO: navegar para tela de edição/detalhe
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('Editar: ${t.nome} (TODO)')));
+    // TODO: abrir tela de edição
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Editar: ${t.nome} (TODO)')));
   }
 
   void _duplicarTreino(Treino t) {
@@ -131,10 +96,7 @@ class _TreinosViewState extends State<TreinosView> {
         title: const Text('Excluir treino'),
         content: Text('Tem certeza que deseja excluir "${t.nome}"?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancelar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           FilledButton(
             onPressed: () {
               setState(() => _treinos.removeWhere((x) => x.id == t.id));
@@ -147,11 +109,12 @@ class _TreinosViewState extends State<TreinosView> {
     );
   }
 
-  // Pull-to-refresh (placeholder)
   Future<void> _pullRefresh() async {
     await Future.delayed(const Duration(milliseconds: 500));
-    // TODO: integrar com API -> GET /treinos
-    if (mounted) setState(() {});
+    // TODO: integrar com API: GET treinos
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
@@ -165,11 +128,9 @@ class _TreinosViewState extends State<TreinosView> {
     final lista = _listaFiltrada;
 
     return Scaffold(
-      // Se seu Shell já tiver AppBar, remova este `appBar:` para evitar duplicidade.
       appBar: AppBar(
         title: const Text('Treinos'),
         actions: [
-          // BOTÃO DE BUSCA: abre o SearchDelegate e aplica a query
           IconButton(
             tooltip: 'Buscar',
             onPressed: () async {
@@ -181,16 +142,11 @@ class _TreinosViewState extends State<TreinosView> {
             },
             icon: const Icon(Icons.search),
           ),
-
-          // FAVORITOS: alterna entre "mostrar todos" e "somente favoritos"
           IconButton(
             tooltip: _somenteFavoritos ? 'Mostrar todos' : 'Somente favoritos',
-            onPressed: () =>
-                setState(() => _somenteFavoritos = !_somenteFavoritos),
+            onPressed: () => setState(() => _somenteFavoritos = !_somenteFavoritos),
             icon: Icon(_somenteFavoritos ? Icons.star : Icons.star_border),
           ),
-
-          // FILTRO POR STATUS: Todos / Ativos / Futuros / Expirados
           PopupMenuButton<TreinoStatus?>(
             tooltip: 'Filtrar status',
             onSelected: (v) => setState(() => _filtroStatus = v),
@@ -198,26 +154,16 @@ class _TreinosViewState extends State<TreinosView> {
               PopupMenuItem(value: null, child: Text('Todos')),
               PopupMenuItem(value: TreinoStatus.ativo, child: Text('Ativos')),
               PopupMenuItem(value: TreinoStatus.futuro, child: Text('Futuros')),
-              PopupMenuItem(
-                value: TreinoStatus.expirado,
-                child: Text('Expirados'),
-              ),
+              PopupMenuItem(value: TreinoStatus.expirado, child: Text('Expirados')),
             ],
             icon: const Icon(Icons.filter_list),
           ),
         ],
       ),
-
-      // LISTA + REFRESH
       body: RefreshIndicator(
         onRefresh: _pullRefresh,
-        // Quando a lista está vazia, mostramos um "estado vazio" convidando a criar o primeiro treino
-        child: lista.isEmpty
-            ? _buildEmptyState(context)
-            : _buildList(context, lista),
+        child: lista.isEmpty ? _buildEmptyState(context) : _buildList(context, lista),
       ),
-
-      // BOTÃO DE AÇÃO FLUTUANTE: cria novo treino
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _abrirNovoTreino,
         icon: const Icon(Icons.add),
@@ -226,9 +172,6 @@ class _TreinosViewState extends State<TreinosView> {
     );
   }
 
-  // ----------------------------------------------------------------------------
-  // Constrói a lista de cards com TreinoCard
-  // ----------------------------------------------------------------------------
   Widget _buildList(BuildContext context, List<Treino> lista) {
     return ListView.builder(
       controller: _scrollCtrl,
@@ -239,30 +182,26 @@ class _TreinosViewState extends State<TreinosView> {
         return TreinoCard(
           treino: t,
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => TreinoDetalheView(treino: t)),
-            );
+            // TODO: navegar para detalhes do treino
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Abrir: ${t.nome} (TODO)')));
           },
           onEditar: () => _editarTreino(t),
           onDuplicar: () => _duplicarTreino(t),
           onExcluir: () => _excluirTreino(t),
           onToggleFavorito: () {
-            /* ... */
+            final idx = _treinos.indexWhere((x) => x.id == t.id);
+            if (idx >= 0) {
+              setState(() => _treinos[idx] = _treinos[idx].copyWith(favorito: !t.favorito));
+            }
           },
         );
       },
     );
   }
 
-  // ----------------------------------------------------------------------------
-  // Estado vazio (primeiro acesso, sem treinos ainda)
-  // Usamos ListView para permitir o pull-to-refresh mesmo vazio.
-  // ----------------------------------------------------------------------------
   Widget _buildEmptyState(BuildContext context) {
     final theme = Theme.of(context);
     return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
       children: [
         SizedBox(height: MediaQuery.of(context).size.height * 0.15),
         Icon(Icons.fitness_center, size: 72, color: theme.colorScheme.primary),
@@ -275,7 +214,6 @@ class _TreinosViewState extends State<TreinosView> {
           child: Text(
             'Crie seu primeiro plano de treino para começar.',
             style: theme.textTheme.bodyMedium,
-            textAlign: TextAlign.center,
           ),
         ),
         const SizedBox(height: 16),
@@ -288,32 +226,36 @@ class _TreinosViewState extends State<TreinosView> {
         ),
       ],
     );
-    // Dica: você pode exibir aqui também dicas/atalhos para "treinos favoritos" do personal.
   }
 }
 
-/// SearchDelegate simples que só devolve a string buscada.
-/// A tela principal aplica o filtro de fato (em `_listaFiltrada`).
 class _TreinoSearchDelegate extends SearchDelegate<String?> {
   _TreinoSearchDelegate({String? initialQuery}) {
     query = initialQuery ?? '';
   }
 
   @override
-  List<Widget>? buildActions(BuildContext context) => [
-    if (query.isNotEmpty)
-      IconButton(onPressed: () => query = '', icon: const Icon(Icons.clear)),
-  ];
+  List<Widget>? buildActions(BuildContext context) {
+    return [
+      if (query.isNotEmpty)
+        IconButton(
+          onPressed: () => query = '',
+          icon: const Icon(Icons.clear),
+        ),
+    ];
+  }
 
   @override
-  Widget? buildLeading(BuildContext context) => IconButton(
-    onPressed: () => close(context, null),
-    icon: const Icon(Icons.arrow_back),
-  );
+  Widget? buildLeading(BuildContext context) {
+    return IconButton(
+      onPressed: () => close(context, null),
+      icon: const Icon(Icons.arrow_back),
+    );
+  }
 
   @override
   Widget buildResults(BuildContext context) {
-    // Ao confirmar, retornamos a query para a TreinosView aplicar o filtro.
+    // Apenas retorna a query; a tela principal faz o filtro.
     return Center(
       child: FilledButton(
         onPressed: () => close(context, query),
@@ -323,8 +265,10 @@ class _TreinoSearchDelegate extends SearchDelegate<String?> {
   }
 
   @override
-  Widget buildSuggestions(BuildContext context) => const Padding(
-    padding: EdgeInsets.all(16),
-    child: Text('Digite para buscar por nome do treino...'),
-  );
+  Widget buildSuggestions(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Text('Digite para buscar por nome do treino...'),
+    );
+  }
 }
