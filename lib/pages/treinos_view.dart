@@ -1,6 +1,7 @@
 // lib/pages/treinos_view.dart
 import 'package:flutter/material.dart';
-import '../models/treino_detalhe_view.dart';
+import 'package:consultoria_app/pages/treino_detalhe_view.dart'; //
+
 
 // Modelo (status, datas, etc.)
 import '../models/treino.dart';

@@ -9,6 +9,9 @@ import 'pages/treinos_view.dart' as treinos;
 import 'pages/consultoria_view.dart';
 import 'pages/perfil_view.dart';
 import 'theme/app_theme.dart'; 
+import 'pages/nutricao_view.dart';
+import 'pages/gerar_treino_view.dart';
+
 
 void main() {
   // Garante que bindings do Flutter estão prontos (útil se futuramente inicializar plugins)
@@ -44,6 +47,7 @@ class App extends StatelessWidget {
         '/': (_) => const LoginPage(),
         '/register': (_) => const RegisterPage(),
         '/home': (_) => const Shell(),
+        '/gerar-treino': (_) => const GerarTreinoView(),
       },
     );
   }
@@ -63,11 +67,12 @@ class _ShellState extends State<Shell> {
 
   // Páginas exibidas pelas abas. Mantemos `const` em cada item (quando possível)
   // e tipamos a lista para evitar o erro de "const list com não-const".
-  final List<Widget> pages = <Widget>[
-    const HomeView(),
-    const treinos.TreinosView(),
-    const ConsultoriaView(),
-    const PerfilView(),
+  final List<Widget> pages = const <Widget>[
+    HomeView(),
+    treinos.TreinosView(),
+    ConsultoriaView(),
+    NutricaoView(),      // 👈 nova aba
+    PerfilView(),
   ];
 
   @override
@@ -99,6 +104,11 @@ class _ShellState extends State<Shell> {
             icon: Icon(Icons.support_agent_outlined),
             selectedIcon: Icon(Icons.support_agent),
             label: 'Consultoria',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.restaurant_menu),   // 👈 Nutrição no nav
+            selectedIcon: Icon(Icons.restaurant),
+            label: 'Nutrição',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),

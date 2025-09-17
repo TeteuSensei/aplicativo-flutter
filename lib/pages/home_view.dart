@@ -1,16 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:table_calendar/table_calendar.dart';
 
-/// Home com layout moderno (Material 3)
-/// - AppBar próprio (como combinamos, cada página tem o seu)
-/// - Pull-to-refresh (placeholder para integração com API)
-/// - Cards de estatísticas
-/// - Ações rápidas
-/// - Lista de "Próximas sessões"
-/// - Seção horizontal de "Treinos favoritos"
-///
-/// TODO (integração):
-///  - Substituir mocks por GET /dashboard (ou endpoints específicos)
-///  - Navegar nas ações rápidas para as páginas reais
+/// Home minimalista:
+/// - AppBar
+/// - Botões de acesso rápido
+/// - Calendário mensal com marcações e lista de sessões do dia selecionado
 class HomeView extends StatefulWidget {
   const HomeView({super.key});
 
@@ -19,19 +13,11 @@ class HomeView extends StatefulWidget {
 }
 
 class _HomeViewState extends State<HomeView> {
-  // =======================
-  // Mocks de dashboard
-  // (depois trocar por dados da API)
-  // =======================
-  int sessoesSemana = 4;
-  int concluidosSemana = 3;
-  int minutosTreinoSemana = 180;
-
-  // Sessões futuras (ex.: próximas 48h)
-  final List<_Sessao> proximasSessoes = [
+  // === Sessões de exemplo (trocar pela sua API depois) ===
+  final List<_Sessao> _todasSessoes = [
     _Sessao(
       titulo: 'Peito e Tríceps',
-      inicio: DateTime.now().add(const Duration(hours: 4)),
+      inicio: DateTime.now().add(const Duration(hours: 3)),
       duracaoMin: 60,
       local: 'Academia X',
     ),
@@ -43,202 +29,146 @@ class _HomeViewState extends State<HomeView> {
     ),
     _Sessao(
       titulo: 'Pernas (Força)',
-      inicio: DateTime.now().add(const Duration(days: 1, hours: 20)),
+      inicio: DateTime.now().add(const Duration(days: 2, hours: 19)),
       duracaoMin: 70,
       local: 'Academia X',
     ),
   ];
 
-  // Favoritos (nomes de treinos)
-  final List<String> favoritos = [
-    'Hipertrofia ABC',
-    'Full-Body 3x',
-    'Emagrecimento HIIT',
-    'Mobilidade Diária',
-  ];
+  late Map<DateTime, List<_Sessao>> _eventosPorDia;
 
-  // Pull-to-refresh: simula atualização
-  Future<void> _refresh() async {
-    await Future.delayed(const Duration(milliseconds: 600));
-    // TODO: chamar API e setState com os novos dados
-    if (!mounted) return;
-    setState(() {
-      // exemplo bobo só pra dar cara de atualização
-      minutosTreinoSemana += 5;
-    });
+  DateTime _focusedDay = DateTime.now();
+  DateTime _selectedDay = _normalize(DateTime.now());
+
+  @override
+  void initState() {
+    super.initState();
+    _eventosPorDia = _agruparPorDia(_todasSessoes);
   }
 
-  // Ações rápidas (placeholder)
-  void _novaSessao() {
-    // TODO: navegar para criação de sessão/treino
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Criar nova sessão (TODO)')));
+  // ===== Utils =====
+  static DateTime _normalize(DateTime d) => DateTime(d.year, d.month, d.day);
+
+  Map<DateTime, List<_Sessao>> _agruparPorDia(List<_Sessao> xs) {
+    final map = <DateTime, List<_Sessao>>{};
+    for (final s in xs) {
+      final key = _normalize(s.inicio);
+      (map[key] ??= []).add(s);
+    }
+    return map;
   }
 
-  void _verTreinos() {
-    // TODO: navegar para /Treinos
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Ir para Treinos (TODO)')));
+  List<_Sessao> _getEventos(DateTime day) =>
+      _eventosPorDia[_normalize(day)] ?? const [];
+
+  String _fmtHoraMin(DateTime dt) {
+    String dois(int n) => n.toString().padLeft(2, '0');
+    return '${dois(dt.hour)}:${dois(dt.minute)}';
   }
 
-  void _abrirConsultoria() {
-    // TODO: navegar para /Consultoria
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Abrir Consultoria (TODO)')));
-  }
+  // ===== Ações rápidas (placeholder) =====
+ void _onGerarTreino() =>
+    Navigator.pushNamed(context, '/gerar-treino');
 
-  void _abrirPerfil() {
-    // TODO: navegar para /Perfil
-    ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('Abrir Perfil (TODO)')));
-  }
+  void _onTreinos() =>
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ir para Treinos (TODO)')));
+  void _onConsultoria() =>
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Abrir Consultoria (TODO)')));
+  void _onPerfil() =>
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Abrir Perfil (TODO)')));
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
 
+    final eventosHoje = _getEventos(_selectedDay);
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Início'),
-        actions: [
-          IconButton(
-            tooltip: 'Atualizar',
-            onPressed: _refresh,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _novaSessao,
-        icon: const Icon(Icons.play_arrow),
-        label: const Text('Começar sessão'),
-      ),
+      appBar: AppBar(title: const Text('Início')),
       body: RefreshIndicator(
-        onRefresh: _refresh,
+        onRefresh: () async {
+          // quando ligar a API, atualize _todasSessoes e _eventosPorDia aqui
+          await Future.delayed(const Duration(milliseconds: 400));
+          if (!mounted) return;
+          setState(() {});
+        },
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
           children: [
-            // ===== Welcome =====
-            _WelcomeCard(
-              onTap: _verTreinos,
-              title: 'Bem-vindo 👋',
-              subtitle: 'Seu painel de treinos e progresso.',
-            ),
-            const SizedBox(height: 12),
-
-            // ===== Stats (grade 2 colunas) =====
-            _StatsGrid(
-              items: [
-                _StatItem(
-                  icon: Icons.schedule,
-                  label: 'Sessões / semana',
-                  value: '$sessoesSemana',
-                ),
-                _StatItem(
-                  icon: Icons.check_circle,
-                  label: 'Concluídos',
-                  value: '$concluidosSemana',
-                ),
-                _StatItem(
-                  icon: Icons.timer,
-                  label: 'Min. na semana',
-                  value: '$minutosTreinoSemana',
-                ),
-                _StatItem(
-                  icon: Icons.local_fire_department,
-                  label: 'Consistência',
-                  value: '${((concluidosSemana / (sessoesSemana == 0 ? 1 : sessoesSemana)) * 100).round()}%',
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // ===== Ações rápidas =====
-            _SectionHeader(
-              title: 'Ações rápidas',
-              icon: Icons.flash_on,
-              trailing: IconButton(
-                tooltip: 'Ver mais',
-                onPressed: _verTreinos,
-                icon: const Icon(Icons.chevron_right),
-              ),
-            ),
-            const SizedBox(height: 8),
+            // ===== Botões de acesso rápido =====
             Wrap(
               spacing: 12,
               runSpacing: 12,
               children: [
-                _QuickAction(
-                  icon: Icons.add_circle,
-                  label: 'Nova sessão',
-                  onTap: _novaSessao,
-                ),
-                _QuickAction(
-                  icon: Icons.fitness_center,
-                  label: 'Ver treinos',
-                  onTap: _verTreinos,
-                ),
-                _QuickAction(
-                  icon: Icons.support_agent,
-                  label: 'Consultoria',
-                  onTap: _abrirConsultoria,
-                ),
-                _QuickAction(
-                  icon: Icons.person,
-                  label: 'Perfil',
-                  onTap: _abrirPerfil,
-                ),
+                _QuickAction(icon: Icons.settings, label: 'Gerar Treino', onTap: _onGerarTreino),
+                _QuickAction(icon: Icons.list_alt, label: 'Treinos', onTap: _onTreinos),
+                _QuickAction(icon: Icons.support_agent, label: 'Consultoria', onTap: _onConsultoria),
+                _QuickAction(icon: Icons.person, label: 'Perfil', onTap: _onPerfil),
               ],
             ),
-            const SizedBox(height: 20),
 
-            // ===== Próximas sessões =====
-            _SectionHeader(
-              title: 'Próximas sessões',
-              icon: Icons.event,
+            const SizedBox(height: 16),
+
+            // ===== Calendário =====
+            Container(
+              decoration: BoxDecoration(
+                color: cs.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: cs.outlineVariant),
+              ),
+              padding: const EdgeInsets.all(8),
+              child: TableCalendar<_Sessao>(
+                firstDay: DateTime.utc(2022, 1, 1),
+                lastDay: DateTime.utc(2032, 12, 31),
+                focusedDay: _focusedDay,
+                calendarFormat: CalendarFormat.month,
+                startingDayOfWeek: StartingDayOfWeek.monday,
+                selectedDayPredicate: (d) => _normalize(d) == _selectedDay,
+                onDaySelected: (selectedDay, focusedDay) {
+                  setState(() {
+                    _selectedDay = _normalize(selectedDay);
+                    _focusedDay = focusedDay;
+                  });
+                },
+                eventLoader: _getEventos,
+                headerStyle: HeaderStyle(
+                  formatButtonVisible: false,
+                  titleCentered: true,
+                  titleTextStyle: Theme.of(context).textTheme.titleMedium!,
+                ),
+                calendarStyle: CalendarStyle(
+                  todayDecoration: BoxDecoration(
+                    color: cs.primary.withOpacity(.2),
+                    shape: BoxShape.circle,
+                  ),
+                  selectedDecoration: BoxDecoration(
+                    color: cs.primary,
+                    shape: BoxShape.circle,
+                  ),
+                  markerDecoration: BoxDecoration(
+                    color: cs.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                daysOfWeekStyle: DaysOfWeekStyle(
+                  weekdayStyle: TextStyle(color: cs.onSurfaceVariant),
+                  weekendStyle: TextStyle(color: cs.onSurfaceVariant),
+                ),
+              ),
             ),
-            const SizedBox(height: 8),
-            if (proximasSessoes.isEmpty)
+
+            const SizedBox(height: 12),
+
+            // ===== Sessões do dia selecionado =====
+            if (eventosHoje.isEmpty)
               _EmptyInline(
                 icon: Icons.event_busy,
-                text: 'Sem sessões agendadas. Comece criando uma!',
+                text: 'Nenhuma sessão para ${_selectedDay.day}/${_selectedDay.month}.',
                 actionLabel: 'Nova sessão',
-                onAction: _novaSessao,
+                onAction: _onGerarTreino,
               )
             else
-              ...proximasSessoes
-                  .map((s) => _SessaoTile(sessao: s))
-                  .toList(growable: false),
-            const SizedBox(height: 20),
-
-            // ===== Favoritos =====
-            _SectionHeader(
-              title: 'Treinos favoritos',
-              icon: Icons.star,
-            ),
-            const SizedBox(height: 8),
-            if (favoritos.isEmpty)
-              _EmptyInline(
-                icon: Icons.star_border,
-                text: 'Sem favoritos ainda.',
-                actionLabel: 'Ver treinos',
-                onAction: _verTreinos,
-              )
-            else
-              SizedBox(
-                height: 40,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: favoritos.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 10),
-                  itemBuilder: (ctx, i) => ActionChip(
-                    label: Text(favoritos[i]),
-                    avatar: const Icon(Icons.star, size: 18),
-                    onPressed: _verTreinos, // TODO: navegar direto pro detalhe
-                    backgroundColor: cs.primaryContainer.withOpacity(.25),
-                  ),
-                ),
-              ),
+              ...eventosHoje.map((s) => _SessaoTile(sessao: s)),
           ],
         ),
       ),
@@ -246,173 +176,8 @@ class _HomeViewState extends State<HomeView> {
   }
 }
 
-// ===================================================================
-// =======================  COMPONENTES UI  ===========================
-// ===================================================================
+// ======== COMPONENTES ========
 
-class _WelcomeCard extends StatelessWidget {
-  final String title;
-  final String subtitle;
-  final VoidCallback? onTap;
-  const _WelcomeCard({
-    required this.title,
-    required this.subtitle,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: cs.primaryContainer.withOpacity(.35),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.fitness_center, color: cs.primary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 4),
-                    Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
-                  ],
-                ),
-              ),
-              const Icon(Icons.arrow_forward_ios, size: 16),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _StatItem {
-  final IconData icon;
-  final String label;
-  final String value;
-  const _StatItem({required this.icon, required this.label, required this.value});
-}
-
-/// Grade 2 colunas com cards de estatísticas
-class _StatsGrid extends StatelessWidget {
-  final List<_StatItem> items;
-  const _StatsGrid({required this.items});
-
-  @override
-  Widget build(BuildContext context) {
-    final isWide = MediaQuery.of(context).size.width >= 480;
-    final crossAxisCount = isWide ? 3 : 2; // 3 colunas em telas mais largas
-
-    return GridView.builder(
-      itemCount: items.length,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: crossAxisCount,
-        mainAxisExtent: 92,
-        crossAxisSpacing: 12,
-        mainAxisSpacing: 12,
-      ),
-      itemBuilder: (ctx, i) => _StatTile(item: items[i]),
-    );
-  }
-}
-
-class _StatTile extends StatelessWidget {
-  final _StatItem item;
-  const _StatTile({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                color: cs.primaryContainer.withOpacity(.35),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(item.icon, color: cs.primary),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(item.label, style: Theme.of(context).textTheme.labelMedium),
-                  const SizedBox(height: 2),
-                  Text(
-                    item.value,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Cabeçalho de seção com ícone e ação opcional
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final IconData icon;
-  final Widget? trailing;
-  const _SectionHeader({required this.title, required this.icon, this.trailing});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Row(
-      children: [
-        Icon(icon, color: cs.primary),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-        ),
-        const Spacer(),
-        if (trailing != null) trailing!,
-      ],
-    );
-  }
-}
-
-/// Ação rápida (botão em card)
 class _QuickAction extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -430,7 +195,7 @@ class _QuickAction extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(12),
-          color: cs.surfaceContainerHighest.withOpacity(.35),
+          color: cs.surfaceVariant.withOpacity(.35),
           border: Border.all(color: cs.outlineVariant.withOpacity(.4)),
         ),
         child: Row(
@@ -452,7 +217,6 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-/// Sessão (modelo local)
 class _Sessao {
   final String titulo;
   final DateTime inicio;
@@ -461,7 +225,6 @@ class _Sessao {
   _Sessao({required this.titulo, required this.inicio, required this.duracaoMin, required this.local});
 }
 
-/// Tile para “Próximas sessões”
 class _SessaoTile extends StatelessWidget {
   final _Sessao sessao;
   const _SessaoTile({required this.sessao});
@@ -469,7 +232,10 @@ class _SessaoTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final inicioFmt = _fmtDataHora(sessao.inicio);
+    String dois(int n) => n.toString().padLeft(2, '0');
+    final data = '${dois(sessao.inicio.day)}/${dois(sessao.inicio.month)}/${sessao.inicio.year}';
+    final hora = '${dois(sessao.inicio.hour)}:${dois(sessao.inicio.minute)}';
+
     return Card(
       elevation: 0,
       margin: const EdgeInsets.only(bottom: 10),
@@ -485,10 +251,9 @@ class _SessaoTile extends StatelessWidget {
           child: Icon(Icons.event_available, color: cs.primary),
         ),
         title: Text(sessao.titulo, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text('$inicioFmt • ${sessao.duracaoMin} min • ${sessao.local}'),
+        subtitle: Text('$data • $hora • ${sessao.duracaoMin} min • ${sessao.local}'),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
-          // TODO: navegar para a sessão/treino específico
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Abrir sessão: ${sessao.titulo} (TODO)')),
           );
@@ -496,16 +261,8 @@ class _SessaoTile extends StatelessWidget {
       ),
     );
   }
-
-  static String _fmtDataHora(DateTime dt) {
-    String dois(int n) => n.toString().padLeft(2, '0');
-    final d = dois(dt.day), m = dois(dt.month), h = dois(dt.hour), min = dois(dt.minute);
-    return '$d/$m • $h:$min';
-    // Se quiser por extenso (qui/sex): use DateFormat EEE from intl (quando adicionar intl).
-  }
 }
 
-/// Estado vazio compacto para linhas
 class _EmptyInline extends StatelessWidget {
   final IconData icon;
   final String text;
